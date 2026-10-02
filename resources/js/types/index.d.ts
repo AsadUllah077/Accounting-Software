@@ -1,0 +1,19 @@
+export interface User {
+    id: number;
+    name: string;
+    email: string;
+    email_verified_at?: string;
+    is_platform_admin?: boolean;
+}
+
+export type PageProps<
+    T extends Record<string, unknown> = Record<string, unknown>,
+> = T & {
+    company: import("../types/accounting").Company | null;
+    companies: import("../types/accounting").Company[];
+    permissions: string[];
+    flash: { success?: string };
+    auth: {
+        user: User;
+    };
+};

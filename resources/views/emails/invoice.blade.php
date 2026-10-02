@@ -1,0 +1,1 @@
+<p>Hello {{ $invoice->customer->name }},</p><p>Please find invoice {{ $invoice->invoice_number }} from {{ $company->name }} attached.</p><p>Amount: {{ $invoice->currency }} {{ $invoice->total }}. Due date: {{ $invoice->due_date }}.</p><p>Thank you.</p>

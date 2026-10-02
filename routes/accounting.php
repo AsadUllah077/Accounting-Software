@@ -1,0 +1,105 @@
+<?php
+
+use App\Http\Controllers\AccountingController;
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\AuditController;
+use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\BankingController;
+use App\Http\Controllers\BusinessExportController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ContactImportController;
+use App\Http\Controllers\CreditController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentOutputController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\ReconciliationSessionController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SubscriptionController;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/admin/plans', [PlanController::class, 'index'])->name('plans.index');
+    Route::post('/admin/plans', [PlanController::class, 'save'])->name('plans.store');
+    Route::put('/admin/plans/{id}', [PlanController::class, 'save'])->name('plans.update');
+    Route::get('/invitations/{token}', fn (string $token) => Inertia::render('Settings/Invitation', ['token' => $token]))->name('invitations.show');
+    Route::post('/invitations/{token}', [SettingsController::class, 'accept'])->name('invitations.accept');
+    Route::get('/companies', [CompanyController::class, 'index'])->name('companies.index');
+    Route::post('/companies', [CompanyController::class, 'store'])->middleware('throttle:20,1')->name('companies.store');
+    Route::post('/companies/{company}/switch', [CompanyController::class, 'switch'])->name('companies.switch');
+    Route::middleware('company')->group(function () {
+        Route::put('/settings/roles/{roleId}/permissions', [PermissionController::class, 'update'])->name('permissions.update');
+        Route::get('/export/{kind}', [BusinessExportController::class, 'download'])->name('business.export');
+        Route::post('/expenses/categories', [ExpenseCategoryController::class, 'store'])->name('expense-categories.store');
+        Route::post('/banking/sessions', [ReconciliationSessionController::class, 'store'])->name('sessions.store');
+        Route::post('/banking/sessions/{id}/close', [ReconciliationSessionController::class, 'close'])->name('sessions.close');
+        Route::get('/exports', [ReportExportController::class, 'index'])->name('exports.index');
+        Route::get('/exports/{id}/download', [ReportExportController::class, 'download'])->name('exports.download');
+        Route::post('/attachments/{kind}/{id}', [AttachmentController::class, 'store'])->where('kind', 'invoice|bill|expense')->name('attachments.store');
+        Route::get('/attachments/{id}', [AttachmentController::class, 'download'])->name('attachments.download');
+        Route::post('/invoices/{id}/send', [DocumentOutputController::class, 'send'])->name('invoices.send');
+        Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+        Route::post('/subscription', [SubscriptionController::class, 'choose'])->name('subscription.choose');
+        Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
+        Route::post('/subscription/invoices/{id}/payments', [SubscriptionController::class, 'payment'])->name('subscription.payment');
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::post('/settings/invitations', [SettingsController::class, 'invite'])->name('settings.invite');
+        Route::put('/settings/users/{id}', [SettingsController::class, 'role'])->name('settings.role');
+        Route::post('/settings/taxes', [SettingsController::class, 'tax'])->name('settings.tax');
+        Route::post('/settings/years', [SettingsController::class, 'year'])->name('settings.year');
+        Route::post('/settings/years/{id}/close', [SettingsController::class, 'closeYear'])->name('settings.close-year');
+        Route::get('/credit-notes', [CreditController::class, 'index'])->name('credits.index');
+        Route::post('/invoices/{invoice}/credits', [CreditController::class, 'store'])->name('credits.store');
+        Route::post('/credit-notes/{id}/refunds', [CreditController::class, 'refund'])->name('credits.refund');
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::get('/expenses/{id}', [ExpenseController::class, 'show'])->whereNumber('id')->name('expenses.show');
+        Route::get('/banking', [BankingController::class, 'index'])->name('banking.index');
+        Route::post('/banking/import', [BankingController::class, 'import'])->name('banking.import');
+        Route::post('/banking/{id}/match', [BankingController::class, 'match'])->name('banking.match');
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
+        Route::prefix('contacts/{kind}')->where(['kind' => 'customers|suppliers'])->group(function () {
+            Route::get('/', [ContactController::class, 'index'])->name('contacts.index');
+            Route::post('/', [ContactController::class, 'store'])->name('contacts.store');
+            Route::post('/import', [ContactImportController::class, 'store'])->name('contacts.import');
+            Route::get('/{id}', [ContactController::class, 'show'])->name('contacts.show');
+            Route::put('/{id}', [ContactController::class, 'update'])->name('contacts.update');
+            Route::delete('/{id}', [ContactController::class, 'destroy'])->name('contacts.destroy');
+        });
+        Route::prefix('documents/{kind}')->where(['kind' => 'invoices|bills'])->group(function () {
+            Route::get('/', [DocumentController::class, 'index'])->name('documents.index');
+            Route::get('/create', [DocumentController::class, 'create'])->name('documents.create');
+            Route::post('/', [DocumentController::class, 'store'])->name('documents.store');
+            Route::get('/{id}/edit', [DocumentController::class, 'edit'])->name('documents.edit');
+            Route::get('/{id}/pdf', [DocumentOutputController::class, 'pdf'])->name('documents.pdf');
+            Route::put('/{id}', [DocumentController::class, 'update'])->name('documents.update');
+            Route::post('/{id}/void', [DocumentController::class, 'void'])->name('documents.void');
+            Route::get('/{id}', [DocumentController::class, 'show'])->name('documents.show');
+            Route::post('/{id}/approve', [DocumentController::class, 'approve'])->name('documents.approve');
+            Route::post('/{id}/payments', [DocumentController::class, 'pay'])->middleware('throttle:60,1')->name('documents.pay');
+        });
+        Route::get('/accounting/accounts', [AccountingController::class, 'accounts'])->name('accounts.index');
+        Route::post('/accounting/accounts', [AccountingController::class, 'saveAccount'])->name('accounts.store');
+        Route::put('/accounting/accounts/{id}', [AccountingController::class, 'saveAccount'])->name('accounts.update');
+        Route::post('/banking/accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+        Route::get('/accounting/journals', [AccountingController::class, 'journals'])->name('journals.index');
+        Route::post('/accounting/journals', [AccountingController::class, 'store'])->name('journals.store');
+        Route::post('/accounting/journals/{id}/reverse', [AccountingController::class, 'reverse'])->name('journals.reverse');
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+        Route::get('/reports', function () {
+            Gate::authorize('permission', 'report.view');
+
+            return Inertia::render('Reports/Index');
+        })->name('reports.index');
+    });
+});
