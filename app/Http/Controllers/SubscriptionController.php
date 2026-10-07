@@ -42,6 +42,6 @@ class SubscriptionController extends Controller
         $data = $request->validate(['reference' => 'required|string|max:255']);
         $service->recordPayment(SubscriptionInvoice::findOrFail($id), $data['reference']);
 
-        return back()->with('success','Verified subscription payment recorded.');
+        return back()->with('success', 'Verified subscription payment recorded.');
     }
 }

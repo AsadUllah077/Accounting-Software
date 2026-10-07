@@ -45,9 +45,9 @@ class ContactImportController extends Controller
                 }
             }
 
-return $count;
+            return $count;
         });
 
-        return back()->with('success',"Imported {$count} new contacts. Existing name/email pairs were skipped.");
+        return back()->with('success', "Imported {$count} new contacts. Existing name/email pairs were skipped.");
     }
 }

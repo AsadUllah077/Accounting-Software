@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\TaxRate;
 use App\Services\Audit\Audit;
 use App\Services\Tenancy\CompanyContext;
+use App\Services\Tenancy\CompanyHome;
 use App\Services\Tenancy\MembershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +69,7 @@ class SettingsController extends Controller
         $company = $service->accept($request->user(), $token);
         $request->session()->put('company_id', $company);
 
-        return redirect('/dashboard')->with('success', 'Invitation accepted.');
+        return redirect(app(CompanyHome::class)->path($request->user(), $company))->with('success', 'Invitation accepted.');
     }
 
     public function tax(Request $request)

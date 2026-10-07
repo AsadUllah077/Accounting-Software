@@ -96,6 +96,12 @@ const groups = [
                 permission: "settings.manage",
             },
             {
+                name: "Users & roles",
+                href: "/settings/users",
+                icon: "♧",
+                permission: "users.manage",
+            },
+            {
                 name: "Subscription",
                 href: "/subscription",
                 icon: "◇",

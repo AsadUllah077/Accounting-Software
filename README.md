@@ -37,10 +37,12 @@ The default suite uses isolated in-memory SQLite. After connecting PostgreSQL, i
 
 ## Documentation
 
+* [Complete project and database workflow guide (PDF)](docs/Ledger-Project-Guide.pdf)
 * [Implemented phases, tests and remaining scope](docs/progress.md)
 * [ERD analysis and accounting design decisions](docs/architecture.md)
 * [Generated schema diagram and column catalog](docs/schema.md)
 * [Installation, Docker and production operations](docs/deployment.md)
+* [Creating users, assigning roles and customizing permissions](docs/user-management.md)
 * [Source-file inventory](docs/files.md)
 * [Desktop screenshot](docs/screenshots/dashboard-desktop.png) and [mobile screenshot](docs/screenshots/dashboard-mobile.png)
 

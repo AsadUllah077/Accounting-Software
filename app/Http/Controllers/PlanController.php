@@ -25,6 +25,6 @@ class PlanController extends Controller
             SubscriptionPlan::create($data);
         }
 
-return back()->with('success', 'Plan saved. Existing subscriptions retain their price snapshots.');
+        return back()->with('success', 'Plan saved. Existing subscriptions retain their price snapshots.');
     }
 }

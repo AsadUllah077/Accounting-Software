@@ -8,16 +8,44 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\Audit\Audit;
 use App\Services\Subscriptions\SubscriptionService;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 final class MembershipService
 {
+    public function createUser(array $data): User
+    {
+        return DB::transaction(function () use ($data) {
+            $company = Company::lockForUpdate()->findOrFail(app(CompanyContext::class)->id());
+            $pending = CompanyInvitation::whereNull('accepted_at')->where('expires_at', '>', now())->count();
+            app(SubscriptionService::class)->assertLimit('users', $company->users()->wherePivot('is_active', true)->count() + $pending);
+            $role = Role::findOrFail($data['role_id']);
+            $email = strtolower(trim($data['email']));
+            if (User::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+                throw ValidationException::withMessages(['email' => 'An account already uses this email. Invite that person instead.']);
+            }
+            $user = User::create(['name' => $data['name'], 'email' => $email, 'password' => $data['password']]);
+            $company->users()->attach($user->id, ['role_id' => $role->id, 'is_active' => true]);
+            Audit::record('company.user_created', $user, [], ['email' => $email, 'role' => $role->name]);
+            DB::afterCommit(fn () => event(new Registered($user)));
+
+            return $user;
+        });
+    }
+
     public function invite(array $data): string
     {
         return DB::transaction(function () use ($data) {
             $company = Company::lockForUpdate()->findOrFail(app(CompanyContext::class)->id());
+            $email = strtolower(trim($data['email']));
+            if ($company->users()->whereRaw('LOWER(users.email) = ?', [$email])->exists()) {
+                throw ValidationException::withMessages(['email' => 'This person already belongs to your company. Update their membership instead.']);
+            }
+            if (CompanyInvitation::where('email', $email)->whereNull('accepted_at')->where('expires_at', '>', now())->exists()) {
+                throw ValidationException::withMessages(['email' => 'A pending invitation already exists for this email.']);
+            }
             $pending = CompanyInvitation::whereNull('accepted_at')->where('expires_at', '>', now())->count();
             app(SubscriptionService::class)->assertLimit('users', $company->users()->wherePivot('is_active', true)->count() + $pending);
             $role = Role::findOrFail($data['role_id']);
@@ -55,6 +83,10 @@ final class MembershipService
             $company = app(CompanyContext::class)->company();
             $company->newQuery()->lockForUpdate()->findOrFail($company->id);
             $member = $company->users()->findOrFail($userId);
+            if ($active && ! $member->pivot->is_active) {
+                $pending = CompanyInvitation::whereNull('accepted_at')->where('expires_at', '>', now())->count();
+                app(SubscriptionService::class)->assertLimit('users', $company->users()->wherePivot('is_active', true)->count() + $pending);
+            }
             $role = Role::findOrFail($roleId);
             $owner = Role::where('name', 'Owner')->firstOrFail();
             $ownerCount = $company->users()->wherePivot('role_id', $owner->id)->wherePivot('is_active', true)->count();
@@ -62,7 +94,7 @@ final class MembershipService
                 throw ValidationException::withMessages(['role_id' => 'A company must retain an active owner.']);
             }
             $company->users()->updateExistingPivot($userId, ['role_id' => $roleId, 'is_active' => $active]);
-            Audit::record('permission.changed', $member, ['role_id' => $member->pivot->role_id], ['role_id' => $roleId, 'is_active' => $active]);
+            Audit::record('permission.changed', $member, ['role_id' => $member->pivot->role_id, 'is_active' => (bool) $member->pivot->is_active], ['role_id' => $roleId, 'is_active' => $active]);
         });
     }
 }

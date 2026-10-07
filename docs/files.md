@@ -274,3 +274,11 @@ Generated inventory of application, configuration, frontend, schema, tests and d
 * `tools/setup-postgres.ps1`
 * `tsconfig.json`
 * `vite.config.js`
+* `app/Http/Controllers/CompanyUserController.php`
+* `app/Http/Requests/CreateCompanyUserRequest.php`
+* `app/Services/Tenancy/CompanyHome.php`
+* `resources/js/Components/CreateCompanyUserForm.vue`
+* `resources/js/Components/MemberAccessForm.vue`
+* `resources/js/Pages/Settings/Users.vue`
+* `tests/Feature/CompanyUserManagementTest.php`
+* `tools/browser-users-check.mjs`

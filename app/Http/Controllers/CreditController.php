@@ -35,6 +35,6 @@ class CreditController extends Controller
         $data = $request->validate(['amount' => 'required|decimal:0,2|gt:0', 'bank_account_id' => 'required|integer', 'date' => 'required|date_format:Y-m-d', 'idempotency_key' => 'required|string|max:100']);
         $service->refund(CreditNote::findOrFail($id), $data, $request->user()->id);
 
-        return back()->with('success','Customer refund recorded.');
+        return back()->with('success', 'Customer refund recorded.');
     }
 }

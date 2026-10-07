@@ -7,6 +7,7 @@ use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\BankingController;
 use App\Http\Controllers\BusinessExportController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CompanyUserController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactImportController;
 use App\Http\Controllers\CreditController;
@@ -51,6 +52,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
         Route::post('/subscription/invoices/{id}/payments', [SubscriptionController::class, 'payment'])->name('subscription.payment');
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::get('/settings/users', [CompanyUserController::class, 'index'])->name('users.index');
+        Route::post('/settings/users', [CompanyUserController::class, 'store'])->middleware('throttle:20,1')->name('users.store');
+        Route::delete('/settings/invitations/{id}', [CompanyUserController::class, 'revokeInvitation'])->name('invitations.revoke');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
         Route::post('/settings/invitations', [SettingsController::class, 'invite'])->name('settings.invite');
         Route::put('/settings/users/{id}', [SettingsController::class, 'role'])->name('settings.role');

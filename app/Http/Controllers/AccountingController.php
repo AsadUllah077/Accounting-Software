@@ -49,6 +49,6 @@ class AccountingController extends Controller
         $data = $request->validate(['date' => 'required|date_format:Y-m-d']);
         $service->reverse(JournalEntry::findOrFail($id), $data['date'], $request->user()->id);
 
-        return back()->with('success','Reversal posted.');
+        return back()->with('success', 'Reversal posted.');
     }
 }

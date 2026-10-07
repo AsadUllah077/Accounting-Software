@@ -1,0 +1,55 @@
+import { chromium } from '@playwright/test';
+import fs from 'node:fs';
+const credentials = JSON.parse(fs.readFileSync('.browser-session.json', 'utf8'));
+const browser = await chromium.launch({headless:true, executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+const page = await browser.newPage({viewport:{width:1440,height:1000}});
+const errors=[];
+page.on('pageerror',error=>errors.push(error.message));
+try {
+    await page.goto('http://127.0.0.1:8087/login');
+    await page.getByLabel('Email').fill(credentials.email);
+    await page.getByLabel('Password',{exact:true}).fill(credentials.password);
+    await page.getByRole('button',{name:'Log in'}).click();
+    await page.waitForURL('**/companies');
+    await page.getByRole('button',{name:/Browser Studio/}).click();
+    await page.waitForURL('**/dashboard');
+    await page.getByRole('link',{name:'Users & roles',exact:true}).click();
+    await page.getByRole('heading',{name:'Users & roles',exact:true}).waitFor();
+    const email='team.member@ledger.test';
+    if(await page.getByText(email,{exact:true}).count()===0) {
+        await page.getByRole('button',{name:'New user',exact:true}).click();
+        await page.getByLabel('New user name',{exact:true}).fill('Browser Team Member');
+        await page.getByLabel('New user email',{exact:true}).fill(email);
+        await page.getByLabel('New user password',{exact:true}).fill('LocalBrowserMember123!');
+        await page.getByLabel('Confirm new user password',{exact:true}).fill('LocalBrowserMember123!');
+        await page.getByLabel('New user role',{exact:true}).selectOption({label:'Accountant'});
+        await page.getByRole('button',{name:'Create user',exact:true}).click();
+        await page.getByText('User created. They must verify their email before accessing the company.',{exact:true}).waitFor();
+    }
+    const row=page.locator('tr').filter({has:page.getByText(email,{exact:true})});
+    await row.getByLabel('Role for Browser Team Member').selectOption({label:'Employee'});
+    await row.getByLabel('Active access for Browser Team Member').uncheck();
+    page.once('dialog',dialog=>dialog.accept());
+    await row.getByRole('button',{name:'Save access',exact:true}).click();
+    await page.getByText('Membership updated.',{exact:true}).waitFor();
+    await page.reload();
+    if(await row.getByLabel('Active access for Browser Team Member').isChecked())throw new Error('Deactivation did not persist.');
+    await page.getByLabel('Role to customize').selectOption({label:'Read-only User'});
+    const permission=page.getByLabel('contact.create',{exact:true});
+    const original=await permission.isChecked();
+    await permission.setChecked(!original);
+    await page.getByRole('button',{name:'Save company permissions',exact:true}).click();
+    await page.getByText('Role permissions updated for this company.',{exact:true}).waitFor();
+    await page.reload();
+    if(await permission.isChecked()===original)throw new Error('Permission change did not persist.');
+    await permission.setChecked(original);
+    await page.getByRole('button',{name:'Save company permissions',exact:true}).click();
+    await page.getByText('Role permissions updated for this company.',{exact:true}).waitFor();
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await page.screenshot({path:'docs/screenshots/users-desktop.png',fullPage:true});
+    await page.setViewportSize({width:390,height:844});
+    await page.reload();
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))throw new Error('Users page overflows the mobile viewport.');
+    if(errors.length)throw new Error(errors.join('\n'));
+    console.log('Users browser check passed: account creation, role assignment, deactivation, persisted permission edits, desktop/mobile layout.');
+} finally { await browser.close(); }

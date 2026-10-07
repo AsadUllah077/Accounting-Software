@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CompanyRequest;
 use App\Models\Currency;
+use App\Services\Tenancy\CompanyHome;
 use App\Services\Tenancy\CreateCompany;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +21,7 @@ class CompanyController extends Controller
         $company = $action->execute($request->user(), $request->validated());
         $request->session()->put('company_id', $company->id);
 
-        return redirect()->route('dashboard');
+        return redirect(app(CompanyHome::class)->path($request->user(), $company->id));
     }
 
     public function switch(Request $request, int $company)
@@ -28,6 +29,6 @@ class CompanyController extends Controller
         $record = $request->user()->companies()->wherePivot('is_active', true)->where('companies.status', 'active')->findOrFail($company);
         $request->session()->put('company_id', $record->id);
 
-        return redirect()->route('dashboard');
+        return redirect(app(CompanyHome::class)->path($request->user(), $record->id));
     }
 }

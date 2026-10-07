@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { router } from "@inertiajs/vue3";
+import { useForm } from "@inertiajs/vue3";
 const props = defineProps<{
     roles: any[];
     permissions: { id: number; name: string }[];
@@ -11,6 +11,7 @@ const roleId = ref(
         props.roles[0]?.id,
 );
 const selected = ref<number[]>([]);
+const form = useForm({ permissions: [] as number[] });
 function load() {
     const role = props.roles.find((r) => r.id === Number(roleId.value));
     selected.value = role?.permissions.map((p: any) => p.id) ?? [];
@@ -27,8 +28,9 @@ function load() {
 }
 load();
 function save() {
-    router.put(`/settings/roles/${roleId.value}/permissions`, {
-        permissions: selected.value,
+    form.permissions = [...selected.value];
+    form.put(`/settings/roles/${roleId.value}/permissions`, {
+        preserveScroll: true,
     });
 }
 </script>
@@ -66,6 +68,15 @@ function save() {
                 />{{ permission.name }}</label
             >
         </div>
-        <button @click="save" class="btn mt-5">Save company permissions</button>
+        <p
+            v-for="(error, key) in form.errors"
+            :key="key"
+            class="mt-3 text-sm text-rose-600"
+        >
+            {{ error }}
+        </p>
+        <button @click="save" class="btn mt-5" :disabled="form.processing">
+            Save company permissions
+        </button>
     </section>
 </template>
