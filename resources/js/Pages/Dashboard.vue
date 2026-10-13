@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import type { Component } from "vue";
 import { Head, Link, router, useForm } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import PageHeader from "@/Components/PageHeader.vue";
@@ -9,6 +10,12 @@ import StatusBadge from "@/Components/StatusBadge.vue";
 import DateRangeFilter from "@/Components/DateRangeFilter.vue";
 import DataTable from "@/Components/DataTable.vue";
 import { usePermissions } from "@/Composables/usePermissions";
+import {
+    ArrowDownRight,
+    ArrowUpRight,
+    BadgeDollarSign,
+    Landmark,
+} from "lucide-vue-next";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -107,6 +114,12 @@ const cards = [
         caption: "Ledger balance as of period end",
     },
 ];
+const cardIcons: Record<string, Component> = {
+    revenue: ArrowUpRight,
+    expenses: ArrowDownRight,
+    profit: BadgeDollarSign,
+    cash: Landmark,
+};
 </script>
 <template>
     <Head title="Overview" /><AppLayout
@@ -132,7 +145,7 @@ const cards = [
                 :key="card.key"
                 :label="card.label"
                 :amount="summary[card.key]"
-                :icon="card.icon"
+                :icon="cardIcons[card.key]"
                 :caption="card.caption"
                 :accent="card.accent"
             />

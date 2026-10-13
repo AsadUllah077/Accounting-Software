@@ -6,15 +6,19 @@ import PageHeader from "@/Components/PageHeader.vue";
 import DataTable from "@/Components/DataTable.vue";
 import MoneyDisplay from "@/Components/MoneyDisplay.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
+import ContactFilter from "@/Components/ContactFilter.vue";
 import { usePermissions } from "@/Composables/usePermissions";
 import type { Document, Paginated } from "@/types/accounting";
 const props = defineProps<{
     kind: string;
     documents: Paginated<Document>;
     search: string;
+    contact: string;
+    selectedContact: { id: number; name: string } | null;
     status?: string;
 }>();
 const search = ref(props.search),
+    contact = ref(props.selectedContact),
     status = ref(props.status ?? "");
 const { can } = usePermissions();
 </script>
@@ -36,7 +40,7 @@ const { can } = usePermissions();
         >
         <form
             @submit.prevent="
-                router.get(`/documents/${kind}`, { search, status })
+                router.get(`/documents/${kind}`, { search, contact_id: contact?.id ?? '', status })
             "
             class="mb-5 flex flex-wrap gap-3"
         >
@@ -45,6 +49,10 @@ const { can } = usePermissions();
                 class="field !w-64"
                 placeholder="Search document number…"
                 aria-label="Search document number"
+            /><ContactFilter
+                v-model="contact"
+                :endpoint="`/documents/${kind}/contact-options`"
+                :label="kind === 'invoices' ? 'customers' : 'vendors'"
             /><select
                 v-model="status"
                 class="field !w-48"
@@ -64,7 +72,7 @@ const { can } = usePermissions();
                 { key: 'number', label: 'Number' },
                 {
                     key: 'contact',
-                    label: kind === 'invoices' ? 'Customer' : 'Supplier',
+                    label: kind === 'invoices' ? 'Customer' : 'Vendor',
                 },
                 { key: 'due_date', label: 'Due date' },
                 { key: 'status', label: 'Status' },

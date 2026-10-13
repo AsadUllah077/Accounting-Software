@@ -37,10 +37,38 @@ class DocumentController extends Controller
         $sales = $kind === 'invoices';
         $relation = $sales ? 'customer' : 'supplier';
         $search = mb_substr((string) $request->query('search', ''), 0, 100);
+        $contact = mb_substr((string) $request->query('contact', ''), 0, 100);
+        $request->validate(['contact_id' => 'nullable|integer|min:1']);
+        $contactId = $request->query('contact_id');
+        $selectedContact = $contactId ? ($sales ? Customer::class : Supplier::class)::findOrFail($contactId, ['id', 'name']) : null;
         $status = $request->query('status');
-        $documents = $this->model($kind)::with($relation)->when($search, fn ($q) => $q->where($sales ? 'invoice_number' : 'bill_number', 'like', '%'.$search.'%'))->when(in_array($status, ['draft', 'approved', 'partially_paid', 'paid']), fn ($q) => $q->where('status', $status))->latest('id')->paginate(15)->withQueryString();
+        $documents = $this->model($kind)::with($relation)
+            ->when($contactId, fn ($q) => $q->where($sales ? 'customer_id' : 'supplier_id', $contactId))
+            ->when($search, fn ($q) => $q->where($sales ? 'invoice_number' : 'bill_number', 'like', '%'.$search.'%'))
+            ->when($contact, fn ($q) => $q->whereHas($relation, fn ($contactQuery) => $contactQuery->where('name', 'like', '%'.$contact.'%')))
+            ->when(in_array($status, ['draft', 'approved', 'partially_paid', 'paid']), fn ($q) => $q->where('status', $status))
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
 
-        return Inertia::render('Documents/Index', compact('documents', 'kind', 'search', 'status'));
+        return Inertia::render('Documents/Index', compact('documents', 'kind', 'search', 'contact', 'status', 'selectedContact'));
+    }
+
+    public function contactOptions(Request $request, string $kind)
+    {
+        $this->permission($kind, 'view');
+        $data = $request->validate(['search' => 'nullable|string|max:100', 'after' => 'nullable|integer|min:1']);
+        $contacts = ($kind === 'invoices' ? Customer::class : Supplier::class)::query()
+            ->when($data['search'] ?? '', fn ($q, $search) => $q->where('name', 'like', '%'.$search.'%'))
+            ->when($data['after'] ?? null, fn ($q, $after) => $q->where('id', '>', $after))
+            ->orderBy('id')
+            ->limit(26)
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'data' => $contacts->take(25)->values(),
+            'next' => $contacts->count() > 25 ? $contacts[24]->id : null,
+        ]);
     }
 
     public function create(string $kind)

@@ -82,6 +82,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('documents/{kind}')->where(['kind' => 'invoices|bills'])->group(function () {
             Route::get('/', [DocumentController::class, 'index'])->name('documents.index');
             Route::get('/create', [DocumentController::class, 'create'])->name('documents.create');
+            Route::get('/contact-options', [DocumentController::class, 'contactOptions'])->name('documents.contact-options');
             Route::post('/', [DocumentController::class, 'store'])->name('documents.store');
             Route::get('/{id}/edit', [DocumentController::class, 'edit'])->name('documents.edit');
             Route::get('/{id}/pdf', [DocumentOutputController::class, 'pdf'])->name('documents.pdf');
